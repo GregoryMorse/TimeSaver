@@ -164,7 +164,7 @@ BOOL CALLBACK DrawTimeSaverProc(
 	hOldFont = (HFONT)SelectObject(hbdc, hFont);
 	GetTextMetrics(hbdc, &tm);
 	GetTextExtentPoint32(hbdc, szTime, _tcslen(szTime), &pt);
-	x.eM11 = pt.cx / (rc.right - rc.left - 96);
+	x.eM11 = (FLOAT)(rc.right - rc.left - 96) / (FLOAT)pt.cx;
 	x.eM22 = 2;
 	x.eM12 = x.eM21 = x.eDx = x.eDy = 0;
 	SetWorldTransform(hbdc, &x);
@@ -179,6 +179,7 @@ BOOL CALLBACK DrawTimeSaverProc(
 	SetWorldTransform(hbdc, &x);
 	BitBlt(hdc, 0, 0, rc.right - rc.left, rc.bottom - rc.top, hbdc, 0, 0, SRCCOPY);
 	SelectObject(hbdc, holdbmp);
+	DeleteObject(hbdc);
 	DeleteDC(hbdc);
 	return TRUE;
 }
