@@ -140,6 +140,7 @@ LRESULT WINAPI ScreenSaverProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 	static HFONT hFont;
 	TCHAR szTime[10];
 	HFONT hOldFont;
+	TEXTMETRIC tm;
 	XFORM x;
 
 	switch (message)
@@ -161,7 +162,7 @@ LRESULT WINAPI ScreenSaverProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 		// Set a timer for the screen saver window using the 
 		// redraw rate stored in Regedit.ini. 
 		GetClientRect(hWnd, &rc);
-		hFont = CreateFont(rc.bottom / 2, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, FIXED_PITCH, _T("Microsoft Sans Serif"));
+		hFont = CreateFont((rc.bottom - rc.top) / 2, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, FIXED_PITCH, _T("Microsoft Sans Serif"));
 		uTimer = SetTimer(hWnd, 1, 500, NULL);
 
 		break;
@@ -199,7 +200,11 @@ LRESULT WINAPI ScreenSaverProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 		x.eM12 = x.eM21 = x.eDx = x.eDy = 0;
 		SetWorldTransform(hdc, &x);
 		hOldFont = (HFONT)SelectObject(hdc, hFont);
-		ExtTextOut(hdc, rc.right / 2, rc.bottom / 2  - rc.bottom / 12, 0, &rc, szTime, _tcslen(szTime), NULL);
+		GetTextMetrics(hdc, &tm);
+		//GetTextExtentPoint32(hdc, szText, _tcslen(szText), &pt);
+		rc.left += 48;
+		rc.right -= 48;
+		ExtTextOut(hdc, rc.right / 2, rc.bottom  / 4 + tm.tmAscent / 2 - tm.tmDescent / 2, 0, &rc, szTime, _tcslen(szTime), NULL);
 		SelectObject(hdc, hOldFont);
 		ReleaseDC(hWnd, hdc);
 		break;
