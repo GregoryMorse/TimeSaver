@@ -132,16 +132,57 @@ BOOL WINAPI RegisterDialogClasses(HANDLE hInst)
 	return TRUE;
 }
 
+void DrawTimeSaver(HWND hWnd, HFONT hFont)
+{
+	HDC          hdc;      // device-context handle  
+	RECT         rc;       // RECT structure  
+	HDC hbdc;
+	HBITMAP hbmp;
+	HBITMAP holdbmp;
+	TCHAR szTime[10];
+	HFONT hOldFont;
+	TEXTMETRIC tm;
+	SIZE pt;
+	XFORM x;
+	hdc = GetDC(hWnd);
+	hbdc = CreateCompatibleDC(hdc);
+	GetClientRect(hWnd, &rc);
+	hbmp = CreateCompatibleBitmap(hdc, rc.right - rc.left, rc.bottom - rc.top);
+	holdbmp = (HBITMAP)SelectObject(hbdc, hbmp);
+	FillRect(hbdc, &rc, (HBRUSH)GetStockObject(BLACK_BRUSH));
+	_tstrtime_s(szTime);
+	SetTextColor(hbdc, RGB(255, 0, 0));
+	SetTextAlign(hbdc, TA_BASELINE | TA_CENTER | TA_NOUPDATECP);
+	SetBkColor(hbdc, RGB(0, 0, 0));
+	SetGraphicsMode(hbdc, GM_ADVANCED);
+	hOldFont = (HFONT)SelectObject(hbdc, hFont);
+	GetTextMetrics(hbdc, &tm);
+	GetTextExtentPoint32(hbdc, szTime, _tcslen(szTime), &pt);
+	x.eM11 = pt.cx / (rc.right - rc.left - 96);
+	x.eM22 = 2;
+	x.eM12 = x.eM21 = x.eDx = x.eDy = 0;
+	SetWorldTransform(hbdc, &x);
+	rc.left += 48;
+	rc.right -= 48;
+	ExtTextOut(hbdc, (int)(((FLOAT)rc.right / 2) / x.eM11), (rc.bottom / 2 + tm.tmAscent - tm.tmDescent) / x.eM22, 0, &rc, szTime, _tcslen(szTime), NULL);
+	SelectObject(hbdc, hOldFont);
+	rc.left -= 48;
+	rc.right += 48;
+	x.eM11 = 1;
+	x.eM22 = 1;
+	SetWorldTransform(hbdc, &x);
+	BitBlt(hdc, 0, 0, rc.right - rc.left, rc.bottom - rc.top, hbdc, 0, 0, SRCCOPY);
+	ReleaseDC(hWnd, hdc);
+	SelectObject(hbdc, holdbmp);
+	DeleteDC(hbdc);
+}
+
 LRESULT WINAPI ScreenSaverProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	static HDC          hdc;      // device-context handle  
 	static RECT         rc;       // RECT structure  
 	static UINT         uTimer;   // timer identifier  
 	static HFONT hFont;
-	TCHAR szTime[10];
-	HFONT hOldFont;
-	TEXTMETRIC tm;
-	XFORM x;
 
 	switch (message)
 	{
@@ -187,26 +228,7 @@ LRESULT WINAPI ScreenSaverProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 		// light gray, dark gray, or black brush each 
 		// time a WM_TIMER message is issued. 
 
-		hdc = GetDC(hWnd);
-		GetClientRect(hWnd, &rc);
-		//FillRect(hdc, &rc, (HBRUSH)GetStockObject(BLACK_BRUSH));
-		_tstrtime_s(szTime);
-		SetTextColor(hdc, RGB(255, 0, 0));
-		SetTextAlign(hdc, TA_BASELINE | TA_CENTER | TA_NOUPDATECP);
-		SetBkColor(hdc, RGB(0, 0, 0));
-		SetGraphicsMode(hdc, GM_ADVANCED);
-		x.eM11 = 1;
-		x.eM22 = 2;
-		x.eM12 = x.eM21 = x.eDx = x.eDy = 0;
-		SetWorldTransform(hdc, &x);
-		hOldFont = (HFONT)SelectObject(hdc, hFont);
-		GetTextMetrics(hdc, &tm);
-		//GetTextExtentPoint32(hdc, szText, _tcslen(szText), &pt);
-		rc.left += 48;
-		rc.right -= 48;
-		ExtTextOut(hdc, rc.right / 2, rc.bottom  / 4 + tm.tmAscent / 2 - tm.tmDescent / 2, 0, &rc, szTime, _tcslen(szTime), NULL);
-		SelectObject(hdc, hOldFont);
-		ReleaseDC(hWnd, hdc);
+		DrawTimeSaver(hWnd, hFont);
 		break;
 
 	case WM_DESTROY:
