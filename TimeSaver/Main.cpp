@@ -132,9 +132,14 @@ BOOL WINAPI RegisterDialogClasses(HANDLE hInst)
 	return TRUE;
 }
 
-void DrawTimeSaver(HWND hWnd, HFONT hFont)
+
+BOOL CALLBACK DrawTimeSaverProc(
+	HMONITOR hMonitor,  // handle to display monitor
+	HDC hdc,     // handle to monitor DC
+	LPRECT lprcMonitor, // monitor intersection rectangle
+	LPARAM data       // data
+	)
 {
-	HDC          hdc;      // device-context handle  
 	RECT         rc;       // RECT structure  
 	HDC hbdc;
 	HBITMAP hbmp;
@@ -144,9 +149,10 @@ void DrawTimeSaver(HWND hWnd, HFONT hFont)
 	TEXTMETRIC tm;
 	SIZE pt;
 	XFORM x;
-	hdc = GetDC(hWnd);
+	HFONT hFont = (HFONT)data;
 	hbdc = CreateCompatibleDC(hdc);
-	GetClientRect(hWnd, &rc);
+	//GetClientRect(hWnd, &rc);
+	rc = *lprcMonitor;
 	hbmp = CreateCompatibleBitmap(hdc, rc.right - rc.left, rc.bottom - rc.top);
 	holdbmp = (HBITMAP)SelectObject(hbdc, hbmp);
 	FillRect(hbdc, &rc, (HBRUSH)GetStockObject(BLACK_BRUSH));
@@ -172,9 +178,9 @@ void DrawTimeSaver(HWND hWnd, HFONT hFont)
 	x.eM22 = 1;
 	SetWorldTransform(hbdc, &x);
 	BitBlt(hdc, 0, 0, rc.right - rc.left, rc.bottom - rc.top, hbdc, 0, 0, SRCCOPY);
-	ReleaseDC(hWnd, hdc);
 	SelectObject(hbdc, holdbmp);
 	DeleteDC(hbdc);
+	return TRUE;
 }
 
 LRESULT WINAPI ScreenSaverProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -228,7 +234,9 @@ LRESULT WINAPI ScreenSaverProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 		// light gray, dark gray, or black brush each 
 		// time a WM_TIMER message is issued. 
 
-		DrawTimeSaver(hWnd, hFont);
+		hdc = GetDC(hWnd);
+		EnumDisplayMonitors(hdc, NULL, DrawTimeSaverProc, (LPARAM)hFont);
+		ReleaseDC(hWnd, hdc);
 		break;
 
 	case WM_DESTROY:
