@@ -170,7 +170,7 @@ BOOL CALLBACK DrawTimeSaverProc(
 	SetWorldTransform(hbdc, &x);
 	rc.left += (int)((FLOAT)(rc.right - rc.left) * .0375);
 	rc.right -= (int)((FLOAT)(rc.right - rc.left) * .0375);
-	ExtTextOut(hbdc, (int)(((FLOAT)rc.right / 2) / x.eM11), (rc.bottom / 2 + tm.tmAscent - tm.tmDescent) / x.eM22, 0, &rc, szTime, _tcslen(szTime), NULL);
+	ExtTextOut(hbdc, (int)(((FLOAT)(rc.right - rc.left) / 2 + ((FLOAT)(rc.right - rc.left) * .0375)) / x.eM11), (rc.bottom / 2 + tm.tmAscent - tm.tmDescent) / x.eM22, 0, &rc, szTime, _tcslen(szTime), NULL);
 	SelectObject(hbdc, hOldFont);
 	rc.left -= (int)((FLOAT)(rc.right - rc.left) * .0375);
 	rc.right += (int)((FLOAT)(rc.right - rc.left) * .0375);
