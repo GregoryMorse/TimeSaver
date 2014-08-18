@@ -18,7 +18,8 @@ extern HINSTANCE hMainInstance;   // screen saver instance handle
 //TCHAR   szRedrawSpeed[] = _T("Redraw Speed");   // .ini speed entry 
 //TCHAR   szIniFile[MAXFILELEN];     // .ini or registry file name  
 
-BOOL WINAPI ScreenSaverConfigureDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
+BOOL WINAPI ScreenSaverConfigureDialog(HWND hDlg, UINT message,
+										WPARAM wParam, LPARAM lParam)
 {
 	HRESULT  hr;
 	static HWND hSpeed;   // handle to speed scroll bar 
@@ -132,6 +133,7 @@ BOOL WINAPI RegisterDialogClasses(HANDLE hInst)
 	return TRUE;
 }
 
+#define HORZBUF .0375
 
 BOOL CALLBACK DrawTimeSaverProc(
 	HMONITOR hMonitor,  // handle to display monitor
@@ -164,27 +166,32 @@ BOOL CALLBACK DrawTimeSaverProc(
 	hOldFont = (HFONT)SelectObject(hbdc, hFont);
 	GetTextMetrics(hbdc, &tm);
 	GetTextExtentPoint32(hbdc, szTime, _tcslen(szTime), &pt);
-	x.eM11 = (FLOAT)(rc.right - rc.left) * .925 / (FLOAT)pt.cx;
+	x.eM11 = (FLOAT)(rc.right - rc.left) * (1 - HORZBUF * 2) / (FLOAT)pt.cx;
 	x.eM22 = 2;
 	x.eM12 = x.eM21 = x.eDx = x.eDy = 0;
 	SetWorldTransform(hbdc, &x);
-	rc.left += (int)((FLOAT)(rc.right - rc.left) * .0375);
-	rc.right -= (int)((FLOAT)(rc.right - rc.left) * .0375);
-	ExtTextOut(hbdc, (int)(((FLOAT)(rc.right - rc.left) / 2 + ((FLOAT)(rc.right - rc.left) * .0375)) / x.eM11), (rc.bottom / 2 + tm.tmAscent - tm.tmDescent) / x.eM22, 0, &rc, szTime, _tcslen(szTime), NULL);
+	rc.left += (int)((FLOAT)(rc.right - rc.left) * HORZBUF);
+	rc.right -= (int)((FLOAT)(rc.right - rc.left) * HORZBUF);
+	ExtTextOut(hbdc, (int)(((FLOAT)(rc.right - rc.left) / 2 +
+		((FLOAT)(rc.right - rc.left) * HORZBUF)) / x.eM11),
+				(rc.bottom / 2 + tm.tmAscent - tm.tmDescent) / x.eM22, 0, &rc,
+				szTime, _tcslen(szTime), NULL);
 	SelectObject(hbdc, hOldFont);
-	rc.left -= (int)((FLOAT)(rc.right - rc.left) * .0375);
-	rc.right += (int)((FLOAT)(rc.right - rc.left) * .0375);
+	rc.left -= (int)((FLOAT)(rc.right - rc.left) * HORZBUF);
+	rc.right += (int)((FLOAT)(rc.right - rc.left) * HORZBUF);
 	x.eM11 = 1;
 	x.eM22 = 1;
 	SetWorldTransform(hbdc, &x);
-	BitBlt(hdc, 0, 0, rc.right - rc.left, rc.bottom - rc.top, hbdc, 0, 0, SRCCOPY);
+	BitBlt(hdc, 0, 0, rc.right - rc.left, rc.bottom - rc.top,
+		hbdc, 0, 0, SRCCOPY);
 	SelectObject(hbdc, holdbmp);
 	DeleteObject(hbmp);
 	DeleteDC(hbdc);
 	return TRUE;
 }
 
-LRESULT WINAPI ScreenSaverProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+LRESULT WINAPI ScreenSaverProc(HWND hWnd, UINT message,
+								WPARAM wParam, LPARAM lParam)
 {
 	static HDC          hdc;      // device-context handle  
 	static RECT         rc;       // RECT structure  
@@ -196,10 +203,12 @@ LRESULT WINAPI ScreenSaverProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 	case WM_CREATE:
 
 		// Retrieve the application name from the .rc file. 
-		LoadString(hMainInstance, idsAppName, szAppName, APPNAMEBUFFERLEN * sizeof(TCHAR));
+		LoadString(hMainInstance, idsAppName, szAppName,
+											APPNAMEBUFFERLEN * sizeof(TCHAR));
 
 		// Retrieve the .ini (or registry) file name. 
-		LoadString(hMainInstance, idsIniFile, szIniFile, MAXFILELEN * sizeof(TCHAR));
+		LoadString(hMainInstance, idsIniFile, szIniFile,
+												MAXFILELEN * sizeof(TCHAR));
 
 		// TODO: Add error checking to verify LoadString success
 		//       for both calls.
@@ -210,7 +219,10 @@ LRESULT WINAPI ScreenSaverProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 		// Set a timer for the screen saver window using the 
 		// redraw rate stored in Regedit.ini. 
 		GetClientRect(hWnd, &rc);
-		hFont = CreateFont((rc.bottom - rc.top) / 2, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, FIXED_PITCH, _T("Microsoft Sans Serif"));
+		hFont = CreateFont((rc.bottom - rc.top) / 2, 0, 0, 0, FW_BOLD, FALSE,
+			FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
+			CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, FIXED_PITCH,
+			_T("Microsoft Sans Serif"));
 		uTimer = SetTimer(hWnd, 1, 500, NULL);
 
 		break;
