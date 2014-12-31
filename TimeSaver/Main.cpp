@@ -182,7 +182,7 @@ BOOL CALLBACK DrawTimeSaverProc(
 	x.eM11 = 1;
 	x.eM22 = 1;
 	SetWorldTransform(hbdc, &x);
-	BitBlt(hdc, 0, 0, rc.right - rc.left, rc.bottom - rc.top,
+	BitBlt(hdc, lprcMonitor->left, lprcMonitor->top, rc.right - rc.left, rc.bottom - rc.top,
 		hbdc, 0, 0, SRCCOPY);
 	SelectObject(hbdc, holdbmp);
 	DeleteObject(hbmp);
