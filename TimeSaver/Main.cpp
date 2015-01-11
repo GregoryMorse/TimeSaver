@@ -169,14 +169,14 @@ BOOL CALLBACK DrawTimeSaverProc(
 	GetTextMetrics(hbdc, &txm);
 	GetTextExtentPoint32(hbdc, szTime, _tcslen(szTime), &pt);
 	x.eM11 = (FLOAT)(rc.right - rc.left) * (1 - HORZBUF * 2) / (FLOAT)pt.cx;
-	x.eM22 = (rc.bottom - rc.top) * 9.0f / 8.0f / pt.cy;
+	x.eM22 = (FLOAT)(rc.bottom - rc.top) / (FLOAT)pt.cy * 16.0f / 13.0f;
 	x.eM12 = x.eM21 = x.eDx = x.eDy = 0;
 	SetWorldTransform(hbdc, &x);
 	rc.left += (int)((FLOAT)(rc.right - rc.left) * HORZBUF);
 	rc.right -= (int)((FLOAT)(rc.right - rc.left) * HORZBUF);
 	ExtTextOut(hbdc, (int)(((FLOAT)(rc.right - rc.left) / 2 +
 		((FLOAT)(rc.right - rc.left) * HORZBUF)) / x.eM11),
-		(-txm.tmDescent) / x.eM22, 0, &rc,
+		(FLOAT)(rc.top + (rc.bottom - rc.top) / 16.0f - txm.tmDescent * 4.0f / 3.0f), 0, &rc,
 				szTime, _tcslen(szTime), NULL);
 	
 	rc = *lprcMonitor;
@@ -188,7 +188,7 @@ BOOL CALLBACK DrawTimeSaverProc(
 	SetTextColor(hbdc, RGB(255, 255, 255));
 	GetTextExtentPoint32(hbdc, szDate, _tcslen(szDate), &pt);
 	x.eM11 = (FLOAT)(rc.right - rc.left) * (1 - HORZBUF * 2) / (FLOAT)pt.cx;
-	x.eM22 = (rc.bottom - rc.top) / 8.0f / pt.cy;
+	x.eM22 = (FLOAT)(rc.bottom - rc.top) / 8.0f / (FLOAT)pt.cy;
 	SetWorldTransform(hbdc, &x);
 	rc.left += (int)((FLOAT)(rc.right - rc.left) * HORZBUF);
 	rc.right -= (int)((FLOAT)(rc.right - rc.left) * HORZBUF);
