@@ -160,24 +160,26 @@ BOOL CALLBACK DrawTimeSaverProc(
 	holdbmp = (HBITMAP)SelectObject(hbdc, hbmp);
 	FillRect(hbdc, &rc, (HBRUSH)GetStockObject(BLACK_BRUSH));
 	_tstrtime_s(szTime);
+	SetMapMode(hbdc, MM_TEXT);
 	SetTextColor(hbdc, RGB(255, 0, 0));
-	SetTextAlign(hbdc, TA_BASELINE | TA_CENTER | TA_NOUPDATECP);
+	SetTextAlign(hbdc, TA_TOP | TA_CENTER | TA_NOUPDATECP);
 	SetBkColor(hbdc, RGB(0, 0, 0));
 	SetGraphicsMode(hbdc, GM_ADVANCED);
 	hOldFont = (HFONT)SelectObject(hbdc, hFont);
 	GetTextMetrics(hbdc, &txm);
 	GetTextExtentPoint32(hbdc, szTime, _tcslen(szTime), &pt);
 	x.eM11 = (FLOAT)(rc.right - rc.left) * (1 - HORZBUF * 2) / (FLOAT)pt.cx;
-	x.eM22 = 2;
+	x.eM22 = (rc.bottom - rc.top) * 9.0f / 8.0f / pt.cy;
 	x.eM12 = x.eM21 = x.eDx = x.eDy = 0;
 	SetWorldTransform(hbdc, &x);
 	rc.left += (int)((FLOAT)(rc.right - rc.left) * HORZBUF);
 	rc.right -= (int)((FLOAT)(rc.right - rc.left) * HORZBUF);
 	ExtTextOut(hbdc, (int)(((FLOAT)(rc.right - rc.left) / 2 +
 		((FLOAT)(rc.right - rc.left) * HORZBUF)) / x.eM11),
-		(rc.bottom / 2 + txm.tmAscent - txm.tmDescent) / x.eM22, 0, &rc,
+		(-txm.tmDescent) / x.eM22, 0, &rc,
 				szTime, _tcslen(szTime), NULL);
 	
+	rc = *lprcMonitor;
 	TCHAR szDate[1024] = { 0 };
 	time_t t = time(NULL);
 	tm _tm;
@@ -186,11 +188,13 @@ BOOL CALLBACK DrawTimeSaverProc(
 	SetTextColor(hbdc, RGB(255, 255, 255));
 	GetTextExtentPoint32(hbdc, szDate, _tcslen(szDate), &pt);
 	x.eM11 = (FLOAT)(rc.right - rc.left) * (1 - HORZBUF * 2) / (FLOAT)pt.cx;
-	x.eM22 = .125f;
+	x.eM22 = (rc.bottom - rc.top) / 8.0f / pt.cy;
 	SetWorldTransform(hbdc, &x);
+	rc.left += (int)((FLOAT)(rc.right - rc.left) * HORZBUF);
+	rc.right -= (int)((FLOAT)(rc.right - rc.left) * HORZBUF);
 	ExtTextOut(hbdc, (int)(((FLOAT)(rc.right - rc.left) / 2 +
 		((FLOAT)(rc.right - rc.left) * HORZBUF)) / x.eM11),
-		(rc.bottom * 5 / 8 + txm.tmAscent - txm.tmDescent) / x.eM22, 0, &rc,
+		(rc.top + (rc.bottom - rc.top) * 7.0f / 8.0f) / x.eM22, 0, &rc,
 		szDate, _tcslen(szDate), NULL);
 	SelectObject(hbdc, hOldFont);
 	rc.left -= (int)((FLOAT)(rc.right - rc.left) * HORZBUF);
