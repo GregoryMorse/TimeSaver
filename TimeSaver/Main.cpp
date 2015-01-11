@@ -1,6 +1,7 @@
 #include <Windows.h>
 #include <ScrnSave.h>
 #include <tchar.h>
+#include <time.h>
 #include <Strsafe.h>
 
 #include "resource.h"
@@ -148,7 +149,7 @@ BOOL CALLBACK DrawTimeSaverProc(
 	HBITMAP holdbmp;
 	TCHAR szTime[10];
 	HFONT hOldFont;
-	TEXTMETRIC tm;
+	TEXTMETRIC txm;
 	SIZE pt;
 	XFORM x;
 	HFONT hFont = (HFONT)data;
@@ -164,7 +165,7 @@ BOOL CALLBACK DrawTimeSaverProc(
 	SetBkColor(hbdc, RGB(0, 0, 0));
 	SetGraphicsMode(hbdc, GM_ADVANCED);
 	hOldFont = (HFONT)SelectObject(hbdc, hFont);
-	GetTextMetrics(hbdc, &tm);
+	GetTextMetrics(hbdc, &txm);
 	GetTextExtentPoint32(hbdc, szTime, _tcslen(szTime), &pt);
 	x.eM11 = (FLOAT)(rc.right - rc.left) * (1 - HORZBUF * 2) / (FLOAT)pt.cx;
 	x.eM22 = 2;
@@ -174,8 +175,23 @@ BOOL CALLBACK DrawTimeSaverProc(
 	rc.right -= (int)((FLOAT)(rc.right - rc.left) * HORZBUF);
 	ExtTextOut(hbdc, (int)(((FLOAT)(rc.right - rc.left) / 2 +
 		((FLOAT)(rc.right - rc.left) * HORZBUF)) / x.eM11),
-				(rc.bottom / 2 + tm.tmAscent - tm.tmDescent) / x.eM22, 0, &rc,
+		(rc.bottom / 2 + txm.tmAscent - txm.tmDescent) / x.eM22, 0, &rc,
 				szTime, _tcslen(szTime), NULL);
+	
+	TCHAR szDate[1024] = { 0 };
+	time_t t = time(NULL);
+	tm _tm;
+	localtime_s(&_tm, &t);
+	_tcsftime(szDate, 1024, _T("%#x"), &_tm);
+	SetTextColor(hbdc, RGB(255, 255, 255));
+	GetTextExtentPoint32(hbdc, szDate, _tcslen(szDate), &pt);
+	x.eM11 = (FLOAT)(rc.right - rc.left) * (1 - HORZBUF * 2) / (FLOAT)pt.cx;
+	x.eM22 = .125f;
+	SetWorldTransform(hbdc, &x);
+	ExtTextOut(hbdc, (int)(((FLOAT)(rc.right - rc.left) / 2 +
+		((FLOAT)(rc.right - rc.left) * HORZBUF)) / x.eM11),
+		(rc.bottom * 5 / 8 + txm.tmAscent - txm.tmDescent) / x.eM22, 0, &rc,
+		szDate, _tcslen(szDate), NULL);
 	SelectObject(hbdc, hOldFont);
 	rc.left -= (int)((FLOAT)(rc.right - rc.left) * HORZBUF);
 	rc.right += (int)((FLOAT)(rc.right - rc.left) * HORZBUF);
