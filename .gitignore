@@ -8,3 +8,9 @@
 *.opensdf
 *.sdf
 *.aps
+*.cache
+*.obj
+*.user
+/UpgradeLog.htm
+/TimeSaver/Release/TimeSaver.res
+/TimeSaver/Release/vc120.pdb
