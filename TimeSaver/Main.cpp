@@ -158,7 +158,7 @@ BOOL CALLBACK DrawTimeSaverProc(
 	HFONT hFont = CreateFont((rc.bottom - rc.top) / 2, 0, 0, 0, FW_BOLD, FALSE,
 		FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
 		CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, FIXED_PITCH,
-		_T("Microsoft Sans Serif"));
+		_T("Microsoft Sans Serif")); //could cache in a dictionary keyed by height if necessary for speed
 	if (rc.left != 0) { rc.right -= rc.left; rc.left = 0; }
 	if (rc.top != 0) { rc.bottom -= rc.top; rc.top = 0; }
 	hbmp = CreateCompatibleBitmap(hdc, rc.right - rc.left, rc.bottom - rc.top);
@@ -172,7 +172,7 @@ BOOL CALLBACK DrawTimeSaverProc(
 	SetGraphicsMode(hbdc, GM_ADVANCED);
 	hOldFont = (HFONT)SelectObject(hbdc, hFont);
 	GetTextMetrics(hbdc, &txm);
-	GetTextExtentPoint32(hbdc, szTime, _tcslen(szTime), &pt);
+	GetTextExtentPoint32(hbdc, szTime, (int)_tcslen(szTime), &pt);
 	x.eM11 = (FLOAT)(rc.right - rc.left) * (FLOAT)(1 - HORZBUF * 2) / (FLOAT)pt.cx;
 	x.eM22 = (FLOAT)(rc.bottom - rc.top) / (FLOAT)pt.cy * 16.0f / 13.0f;
 	x.eM12 = x.eM21 = x.eDx = x.eDy = 0;
@@ -182,7 +182,7 @@ BOOL CALLBACK DrawTimeSaverProc(
 	ExtTextOut(hbdc, (int)(((FLOAT)(rc.right - rc.left) / 2 +
 		((FLOAT)(rc.right - rc.left) * HORZBUF)) / x.eM11),
 		(int)((FLOAT)rc.top + (FLOAT)(rc.bottom - rc.top) / 16.0f - (FLOAT)txm.tmDescent * 4.0f / 3.0f), 0, &rc,
-				szTime, _tcslen(szTime), NULL);
+				szTime, (UINT)_tcslen(szTime), NULL);
 	
 	rc = *lprcMonitor;
 	if (rc.left != 0) { rc.right -= rc.left; rc.left = 0; }
@@ -193,7 +193,7 @@ BOOL CALLBACK DrawTimeSaverProc(
 	localtime_s(&_tm, &t);
 	_tcsftime(szDate, 1024, _T("%#x"), &_tm);
 	SetTextColor(hbdc, RGB(255, 255, 255));
-	GetTextExtentPoint32(hbdc, szDate, _tcslen(szDate), &pt);
+	GetTextExtentPoint32(hbdc, szDate, (int)_tcslen(szDate), &pt);
 	x.eM11 = (FLOAT)(rc.right - rc.left) * (FLOAT)(1 - HORZBUF * 2) / (FLOAT)pt.cx;
 	x.eM22 = (FLOAT)(rc.bottom - rc.top) / 8.0f / (FLOAT)pt.cy;
 	SetWorldTransform(hbdc, &x);
@@ -202,7 +202,7 @@ BOOL CALLBACK DrawTimeSaverProc(
 	ExtTextOut(hbdc, (int)(((FLOAT)(rc.right - rc.left) / 2 +
 		((FLOAT)(rc.right - rc.left) * HORZBUF)) / x.eM11),
 		(int)(((FLOAT)rc.top + (FLOAT)(rc.bottom - rc.top) * 7.0f / 8.0f) / x.eM22), 0, &rc,
-		szDate, _tcslen(szDate), NULL);
+		szDate, (UINT)_tcslen(szDate), NULL);
 	SelectObject(hbdc, hOldFont);
 	rc.left -= (int)((FLOAT)(rc.right - rc.left) * HORZBUF);
 	rc.right += (int)((FLOAT)(rc.right - rc.left) * HORZBUF);
@@ -223,7 +223,7 @@ LRESULT WINAPI ScreenSaverProc(HWND hWnd, UINT message,
 {
 	static HDC          hdc;      // device-context handle  
 	static RECT         rc;       // RECT structure  
-	static UINT         uTimer;   // timer identifier  
+	static UINT_PTR     uTimer;   // timer identifier  
 
 	switch (message)
 	{
