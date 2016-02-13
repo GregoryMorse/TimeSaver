@@ -152,10 +152,15 @@ BOOL CALLBACK DrawTimeSaverProc(
 	TEXTMETRIC txm;
 	SIZE pt;
 	XFORM x;
-	HFONT hFont = (HFONT)data;
 	hbdc = CreateCompatibleDC(hdc);
 	//GetClientRect(hWnd, &rc);
 	rc = *lprcMonitor;
+	HFONT hFont = CreateFont((rc.bottom - rc.top) / 2, 0, 0, 0, FW_BOLD, FALSE,
+		FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
+		CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, FIXED_PITCH,
+		_T("Microsoft Sans Serif"));
+	if (rc.left != 0) { rc.right -= rc.left; rc.left = 0; }
+	if (rc.top != 0) { rc.bottom -= rc.top; rc.top = 0; }
 	hbmp = CreateCompatibleBitmap(hdc, rc.right - rc.left, rc.bottom - rc.top);
 	holdbmp = (HBITMAP)SelectObject(hbdc, hbmp);
 	FillRect(hbdc, &rc, (HBRUSH)GetStockObject(BLACK_BRUSH));
@@ -180,6 +185,8 @@ BOOL CALLBACK DrawTimeSaverProc(
 				szTime, _tcslen(szTime), NULL);
 	
 	rc = *lprcMonitor;
+	if (rc.left != 0) { rc.right -= rc.left; rc.left = 0; }
+	if (rc.top != 0) { rc.bottom -= rc.top; rc.top = 0; }
 	TCHAR szDate[1024] = { 0 };
 	time_t t = time(NULL);
 	tm _tm;
@@ -205,6 +212,7 @@ BOOL CALLBACK DrawTimeSaverProc(
 	BitBlt(hdc, lprcMonitor->left, lprcMonitor->top, rc.right - rc.left, rc.bottom - rc.top,
 		hbdc, 0, 0, SRCCOPY);
 	SelectObject(hbdc, holdbmp);
+	DeleteObject(hFont);
 	DeleteObject(hbmp);
 	DeleteDC(hbdc);
 	return TRUE;
@@ -216,7 +224,6 @@ LRESULT WINAPI ScreenSaverProc(HWND hWnd, UINT message,
 	static HDC          hdc;      // device-context handle  
 	static RECT         rc;       // RECT structure  
 	static UINT         uTimer;   // timer identifier  
-	static HFONT hFont;
 
 	switch (message)
 	{
@@ -239,11 +246,11 @@ LRESULT WINAPI ScreenSaverProc(HWND hWnd, UINT message,
 		// Set a timer for the screen saver window using the 
 		// redraw rate stored in Regedit.ini. 
 		GetClientRect(hWnd, &rc);
-		hFont = CreateFont((rc.bottom - rc.top) / 2, 0, 0, 0, FW_BOLD, FALSE,
-			FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS,
-			CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, FIXED_PITCH,
-			_T("Microsoft Sans Serif"));
 		uTimer = SetTimer(hWnd, 1, 500, NULL);
+
+#if _DEBUG
+		SetWindowPos(hWnd, HWND_BOTTOM, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE);
+#endif
 
 		break;
 
@@ -268,7 +275,7 @@ LRESULT WINAPI ScreenSaverProc(HWND hWnd, UINT message,
 		// time a WM_TIMER message is issued. 
 
 		hdc = GetDC(hWnd);
-		EnumDisplayMonitors(hdc, NULL, DrawTimeSaverProc, (LPARAM)hFont);
+		EnumDisplayMonitors(hdc, NULL, DrawTimeSaverProc, (LPARAM)NULL);
 		ReleaseDC(hWnd, hdc);
 		break;
 
@@ -277,7 +284,6 @@ LRESULT WINAPI ScreenSaverProc(HWND hWnd, UINT message,
 		// When the WM_DESTROY message is issued, the screen saver 
 		// must destroy any of the timers that were set at WM_CREATE 
 		// time. 
-		if (hFont) DeleteObject(hFont);
 		if (uTimer)
 			KillTimer(hWnd, uTimer);
 		break;
