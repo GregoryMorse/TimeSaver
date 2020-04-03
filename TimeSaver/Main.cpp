@@ -221,8 +221,11 @@ BOOL CALLBACK DrawTimeSaverProc(
 LRESULT WINAPI ScreenSaverProc(HWND hWnd, UINT message,
 								WPARAM wParam, LPARAM lParam)
 {
-	static HDC          hdc;      // device-context handle  
-	static RECT         rc;       // RECT structure  
+	PAINTSTRUCT ps;
+	HDC          hdc;      // device-context handle  
+	RECT         rc;       // RECT structure  
+	time_t newTime;
+	static time_t lastTime;
 	static UINT_PTR     uTimer;   // timer identifier  
 
 	switch (message)
@@ -274,9 +277,20 @@ LRESULT WINAPI ScreenSaverProc(HWND hWnd, UINT message,
 		// light gray, dark gray, or black brush each 
 		// time a WM_TIMER message is issued. 
 
-		hdc = GetDC(hWnd);
+		//hdc = GetDC(hWnd);
+		//EnumDisplayMonitors(hdc, NULL, DrawTimeSaverProc, (LPARAM)NULL);
+		//ReleaseDC(hWnd, hdc);
+		newTime = time(NULL);
+		if (lastTime != newTime) {
+			lastTime = newTime;
+			RedrawWindow(hWnd, NULL, NULL, RDW_INVALIDATE | RDW_UPDATENOW);
+		}
+		break;
+
+	case WM_PAINT:
+		hdc = BeginPaint(hWnd, &ps);
 		EnumDisplayMonitors(hdc, NULL, DrawTimeSaverProc, (LPARAM)NULL);
-		ReleaseDC(hWnd, hdc);
+		EndPaint(hWnd, &ps);
 		break;
 
 	case WM_DESTROY:

@@ -14,3 +14,14 @@
 /UpgradeLog.htm
 /TimeSaver/Release/TimeSaver.res
 /TimeSaver/Release/vc120.pdb
+*.iobj
+*.ipdb
+*.idb
+/TimeSaver/Debug
+/TimeSaver/Release
+/TimeSaver/x64
+/x64/Debug
+/obj
+/.vs/TimeDisplay/v16
+/Debug
+/bin
