@@ -11,12 +11,66 @@ Imports System.Numerics
 'single pi: -log(sqrt((-cos pi)% %...%))=n
 'https://www.cut-the-knot.org/arithmetic/funny/Dirac.shtml#solution
 
+Public Class Rational
+    Public Numerator As BigInteger
+    Public Denominator As BigInteger
+    Public Sub New(ByVal _Numerator As BigInteger, ByVal _Denominator As BigInteger)
+        Dim gcd As BigInteger = BigInteger.GreatestCommonDivisor(Numerator, Denominator)
+        If gcd = BigInteger.One Then
+            Numerator = _Numerator
+            Denominator = _Denominator
+        Else
+            Numerator = _Numerator / gcd
+            Denominator = _Denominator / gcd
+        End If
+    End Sub
+    Public Shared Function SimplifyRational(ByVal r As Rational)
+        Dim gcd As BigInteger = BigInteger.GreatestCommonDivisor(r.Numerator, r.Denominator)
+        If gcd = BigInteger.One Then Return r
+        Return New Rational(r.Numerator / gcd, r.Denominator / gcd)
+    End Function
+    Public Shared Function Divide(dividend As Rational, divisor As Rational) As Rational
+        Return dividend / divisor
+    End Function
+    Public Shared Function Multiply(left As Rational, right As Rational) As Rational
+        Return left * right
+    End Function
+    Public Shared Function Subtract(left As Rational, right As Rational) As Rational
+        Return left - right
+    End Function
+    Public Shared Function Add(left As Rational, right As Rational) As Rational
+        Return left + right
+    End Function
+    Public Shared Function Abs(value As Rational) As Rational
+        If value.Numerator.Sign < 1 Then
+            Return New Rational(-value.Numerator, value.Denominator)
+        ElseIf value.Denominator.Sign < 1 Then
+            Return New Rational(value.Numerator, -value.Denominator)
+        End If
+        Return value
+    End Function
+    Public Shared Operator +(left As Rational, right As Rational) As Rational
+        Dim gcd As BigInteger = BigInteger.GreatestCommonDivisor(left.Denominator, right.Denominator) 'lcm is left.Denominator * right.Denominator / gcd
+        Return SimplifyRational(New Rational(left.Numerator * right.Denominator / gcd + right.Numerator * left.Denominator / gcd, left.Denominator * right.Denominator / gcd))
+    End Operator
+    Public Shared Operator -(left As Rational, right As Rational) As Rational
+        Dim gcd As BigInteger = BigInteger.GreatestCommonDivisor(left.Denominator, right.Denominator) 'lcm is left.Denominator * right.Denominator / gcd
+        Return SimplifyRational(New Rational(left.Numerator * right.Denominator / gcd - right.Numerator * left.Denominator / gcd, left.Denominator * right.Denominator / gcd))
+    End Operator
+    Public Shared Operator *(left As Rational, right As Rational) As Rational
+        Return SimplifyRational(New Rational(left.Numerator * right.Numerator, left.Denominator * right.Denominator))
+    End Operator
+    Public Shared Operator /(dividend As Rational, divisor As Rational) As Rational
+        Return SimplifyRational(New Rational(dividend.Numerator * divisor.Denominator, dividend.Denominator * divisor.Numerator))
+    End Operator
+End Class
+
 Public Class EquationFinder
     Shared Function SubsetsK(ByVal List As Object(), ByVal Min As Integer, ByVal k As Integer) As Array
-        Dim Output As New ArrayList
+        Dim Output As New List(Of Array)
         If List.Length = 1 Then
             Output.Add(New Array() {List})
-            Return Output.ToArray(GetType(Array()))
+            Return Output.ToArray()
         End If
         Dim first As Object = List(0)
         Dim Parts As Array() = SubsetsK(List.Skip(1).ToArray(), Min - 1, k)
@@ -32,13 +86,13 @@ Public Class EquationFinder
             'put `first` In its own subset 
             If smaller.Length < k Then Output.Add(New Array() {New Object() {first}}.Concat(smaller).ToArray())
         Next
-        Return Output.ToArray(GetType(Array()))
+        Return Output.ToArray()
     End Function
     Shared Function Subsets(ByVal List As Object()) As Array
-        Dim Output As New ArrayList
+        Dim Output As New List(Of Array)
         If List.Length = 1 Then
             Output.Add(New Array() {List})
-            Return Output.ToArray(GetType(Array()))
+            Return Output.ToArray()
         End If
         Dim first As Object = List(0)
         Dim Parts As Array() = Subsets(List.Skip(1).ToArray())
@@ -52,9 +106,9 @@ Public Class EquationFinder
             'put `first` In its own subset 
             Output.Add(New Array() {New Object() {first}}.Concat(smaller).ToArray())
         Next
-        Return Output.ToArray(GetType(Array()))
+        Return Output.ToArray()
     End Function
-    Shared Sub PartitionHelper(ByVal List As Integer(), ByVal Index As Integer, ByRef Result As ArrayList)
+    Shared Sub PartitionHelper(ByVal List As Integer(), ByVal Index As Integer, ByRef Result As List(Of Array))
         If Index = List.Length - 1 Then
             Result.Add(List)
             Return
@@ -71,7 +125,7 @@ Public Class EquationFinder
     Shared Function GetPartitions(ByVal Number As Integer) As Array()
         'Get partitions of all lengths 1 to Number
         Dim Count As Integer
-        Dim Result As New ArrayList
+        Dim Result As New List(Of Array)
         For Count = 1 To Number
             Dim List(Count - 1) As Integer
             List(0) = Number - (Count - 1)
@@ -80,7 +134,7 @@ Public Class EquationFinder
             Next
             PartitionHelper(List, 0, Result)
         Next
-        Return Result.ToArray(GetType(Array))
+        Return Result.ToArray()
     End Function
     Shared Function Factorial(ByVal Number As BigInteger) As BigInteger
         Dim Result As BigInteger = BigInteger.One
@@ -94,7 +148,7 @@ Public Class EquationFinder
     Public Shared Function GetContigParts(ByVal Number As BigInteger)
         'Generate all integer partitions summing to the number of digits
         'First generate the partitions and then permute through them
-        Dim Parts As New ArrayList
+        Dim Parts As New List(Of BigInteger())
         Dim Count As Integer
         Dim NumSize As Integer = Math.Ceiling(Math.Log10(Number))
         Dim Partitions As Array() = GetPartitions(NumSize)
@@ -109,21 +163,39 @@ Public Class EquationFinder
             Next
             Parts.Add(Numbers)
         Next
-        Return Parts.ToArray(GetType(BigInteger()))
+        Return Parts.ToArray()
     End Function
-    Public Shared Function SplitSolve(ByVal Number As BigInteger) As Object()
+    Public Shared Function SplitSolve(ByVal Number As BigInteger) As ValueTuple(Of Solution, Solution)
         Dim Parts As Array() = GetContigParts(Number)
         For i = 0 To Parts.Length - 1
-            Dim Solution As Object() = Solve(Parts(i))
-            If Not Solution Is Nothing Then Return Solution
+            Dim Solution As ValueTuple(Of Solution, Solution) = Solve(Parts(i))
+            If Not Solution.Item1 Is Nothing AndAlso Not Solution.Item2 Is Nothing Then Return Solution
         Next
         Return Nothing
     End Function
     MustInherit Class Solution
         Implements IComparable(Of Solution)
+        'Left-To-Right Evaluation except for serial exponentiation so operator precedence:
+        'Parenthesis - top precedence
+        'Unary Operation - always need parenthesis
+        'Exponentiation and roots
+        'Multiplication/Division/Modulo
+        'Addition/Subtraction
+        'No precedence for left-sides and initial
+        'Additional parenthesis are typically added due to similarity when subtracting a negative, or double negation occur which should not happen due to minimizing unary operations
+        Public Enum Precedence
+            Unary = 0
+            ExpRoots = 1
+            MultDivMod = 2
+            NoPrec = 3 'AddSub = 3
+        End Enum
+        'Associativity holds for addition, multiplication allowing removal of parenthesis
+        'it does not hold for subtraction, division, modulo or exponentiation (which is usually RTL associative)
+        'https://en.wikipedia.org/wiki/Order_of_operations
         Public Solution As BigInteger
         Public MustOverride Function CountUnaryOperations() As Integer
-        Public MustOverride Function GetEquationString() As String
+        Public MustOverride Function GetEquationString(Optional ByVal prec As Precedence = Precedence.NoPrec, Optional ByVal IsRight As Boolean = False) As String
+        Public MustOverride Function GetLatexEquationString(Optional ByVal prec As Precedence = Precedence.NoPrec, Optional ByVal IsRight As Boolean = False) As String
         Public Overloads Function CompareTo(ByVal other As Solution) As Integer Implements IComparable(Of Solution).CompareTo
             Dim UnOpLeft As Integer = CountUnaryOperations()
             Dim UnOpRight As Integer = other.CountUnaryOperations()
@@ -157,30 +229,60 @@ Public Class EquationFinder
         Public Overrides Function CountUnaryOperations() As Integer
             If Operation = eUnaryOperation.eNone Then Return 0 Else Return 1 + Initial.CountUnaryOperations()
         End Function
-        Public Overrides Function GetEquationString() As String
+        Public Overrides Function GetEquationString(Optional ByVal prec As Precedence = Precedence.NoPrec, Optional ByVal IsRight As Boolean = False) As String
             Select Case Operation
                 Case eUnaryOperation.eNegation
-                    Return "-" + CStr(Initial.GetEquationString())
+                    Return "-" + CStr(Initial.GetEquationString(Precedence.Unary))
                 Case eUnaryOperation.eNaturalExponent
-                    Return "e^" + CStr(Initial.GetEquationString())
+                    Return "e^" + CStr(Initial.GetEquationString(Precedence.Unary))
                 Case eUnaryOperation.eNaturalLogarithm
-                    Return "ln " + CStr(Initial.GetEquationString())
+                    Return "ln " + CStr(Initial.GetEquationString(Precedence.Unary))
                 Case eUnaryOperation.ePowerOf10
-                    Return "E" + CStr(Initial.GetEquationString()) '"10^"
+                    Return "E" + CStr(Initial.GetEquationString(Precedence.Unary)) '"10^"
                 Case eUnaryOperation.eLogarithmBase10
-                    Return "log " + CStr(Initial.GetEquationString())
+                    Return "log " + CStr(Initial.GetEquationString(Precedence.Unary))
                 Case eUnaryOperation.eSquareRoot
-                    Return "√" + CStr(Initial.GetEquationString()) '"sqrt"
+                    Return "√" + CStr(Initial.GetEquationString(Precedence.Unary)) '"sqrt"
                 Case eUnaryOperation.eFactorial
-                    Return CStr(Initial.GetEquationString()) + "!"
+                    Return CStr(Initial.GetEquationString(Precedence.Unary)) + "!"
                 Case eUnaryOperation.eGamma
-                    Return "Γ" + CStr(Initial.GetEquationString())
+                    Return "Γ" + CStr(Initial.GetEquationString(Precedence.Unary))
                 Case eUnaryOperation.ePercent
-                    Return CStr(Initial.GetEquationString()) + "%"
+                    Return CStr(Initial.GetEquationString(Precedence.Unary)) + "%"
                 Case eUnaryOperation.eDecimal
-                    Return "." + CStr(Initial.GetEquationString())
+                    Return "." + CStr(Initial.GetEquationString(Precedence.Unary))
                 Case eUnaryOperation.eDecimalRepeating
-                    Return "." + CStr(Initial.GetEquationString()) + "̅" '... trailing notation is better and more common
+                    Return "." + CStr(Initial.GetEquationString(Precedence.Unary)) + "̅" '... trailing notation is better and more common
+                Case eUnaryOperation.eNone
+                    Return Solution.ToString()
+                Case Else
+                    Return Solution.ToString()
+            End Select
+        End Function
+        Public Overrides Function GetLatexEquationString(Optional ByVal prec As Precedence = Precedence.NoPrec, Optional ByVal IsRight As Boolean = False) As String
+            Select Case Operation
+                Case eUnaryOperation.eNegation
+                    Return "-" + CStr(Initial.GetLatexEquationString(Precedence.Unary))
+                Case eUnaryOperation.eNaturalExponent
+                    Return "\exp^{" + CStr(Initial.GetLatexEquationString(Precedence.Unary)) + "}"
+                Case eUnaryOperation.eNaturalLogarithm
+                    Return "\ln " + CStr(Initial.GetLatexEquationString(Precedence.Unary))
+                Case eUnaryOperation.ePowerOf10
+                    Return "\text{E}" + CStr(Initial.GetLatexEquationString(Precedence.Unary))
+                Case eUnaryOperation.eLogarithmBase10
+                    Return "\log " + CStr(Initial.GetLatexEquationString(Precedence.Unary))
+                Case eUnaryOperation.eSquareRoot
+                    Return "\sqrt{" + CStr(Initial.GetLatexEquationString(Precedence.Unary)) + "}"
+                Case eUnaryOperation.eFactorial
+                    Return CStr(Initial.GetLatexEquationString(Precedence.Unary)) + "!"
+                Case eUnaryOperation.eGamma
+                    Return "\Gamma" + CStr(Initial.GetLatexEquationString(Precedence.Unary))
+                Case eUnaryOperation.ePercent
+                    Return CStr(Initial.GetLatexEquationString(Precedence.Unary)) + "\%"
+                Case eUnaryOperation.eDecimal
+                    Return "." + CStr(Initial.GetLatexEquationString(Precedence.Unary))
+                Case eUnaryOperation.eDecimalRepeating
+                    Return ".\overline{" + CStr(Initial.GetLatexEquationString(Precedence.Unary)) + "}"
                 Case eUnaryOperation.eNone
                     Return Solution.ToString()
                 Case Else
@@ -200,6 +302,7 @@ Public Class EquationFinder
             eDivision
             eModulus
             ePower
+            eNthRoot
         End Enum
         Public Sub New(ByVal _Solution As BigInteger, ByVal _Left As Solution, ByVal _Right As Solution, ByVal _Operation As eBinaryOperation)
             Solution = _Solution
@@ -210,25 +313,63 @@ Public Class EquationFinder
         Public Overrides Function CountUnaryOperations() As Integer
             Return Left.CountUnaryOperations() + Right.CountUnaryOperations()
         End Function
-        Public Overrides Function GetEquationString() As String
+        Public Overrides Function GetEquationString(Optional ByVal prec As Precedence = Precedence.NoPrec, Optional ByVal IsRight As Boolean = False) As String
             'Need parenthesis
             Select Case Operation
                 Case eBinaryOperation.eAddition
-                    Return "(" + Left.GetEquationString() + "+" + Right.GetEquationString() + ")"
+                    Dim S As String = Left.GetLatexEquationString() + "+" + Right.GetLatexEquationString()
+                    Return If(prec < Precedence.NoPrec OrElse IsRight, "(" + S + ")", S)
                 Case eBinaryOperation.eSubtraction
-                    Return "(" + Left.GetEquationString() + "-" + Right.GetEquationString() + ")"
+                    Dim S As String = Left.GetLatexEquationString() + "-" + Right.GetLatexEquationString(Precedence.NoPrec, True)
+                    Return If(prec < Precedence.NoPrec OrElse IsRight, "(" + S + ")", S)
                 Case eBinaryOperation.eMultiplication
                     'Add parenthesis if inner operation precedence lower
-                    Return "(" + Left.GetEquationString() + "*" + Right.GetEquationString() + ")"
+                    Dim S As String = Left.GetEquationString(Precedence.MultDivMod) + "×" + Right.GetEquationString(Precedence.MultDivMod) '*
+                    Return If(prec < Precedence.MultDivMod OrElse prec = Precedence.MultDivMod AndAlso IsRight, "(" + S + ")", S)
                 Case eBinaryOperation.eDivision
                     'Add parenthesis if inner operation precedence lower
-                    Return "(" + Left.GetEquationString() + "/" + Right.GetEquationString() + ")"
+                    Dim S As String = Left.GetEquationString(Precedence.MultDivMod) + "÷" + Right.GetEquationString(Precedence.MultDivMod, True)
+                    Return If(prec < Precedence.MultDivMod OrElse prec = Precedence.MultDivMod AndAlso IsRight, "(" + S + ")", S) '/
                 Case eBinaryOperation.eModulus
                     'Add parenthesis if inner operation precedence lower
-                    Return "(" + Left.GetEquationString() + " Mod " + Right.GetEquationString() + ")"
+                    Dim S As String = Left.GetEquationString(Precedence.MultDivMod) + " Mod " + Right.GetEquationString(Precedence.MultDivMod, True)
+                    Return If(prec < Precedence.MultDivMod OrElse prec = Precedence.MultDivMod AndAlso IsRight, "(" + S + ")", S) '%
                 Case eBinaryOperation.ePower
+                    'Add parenthesis if inner operation precedence lower - right to left
+                    Dim S As String = Left.GetEquationString(Precedence.ExpRoots, True) + "^" + Right.GetEquationString(Precedence.ExpRoots)
+                    Return If(prec = Precedence.ExpRoots AndAlso IsRight, "(" + S + ")", S)
+                Case eBinaryOperation.eNthRoot
+                    Return "(" + Left.GetEquationString(Precedence.MultDivMod) + "√" + Right.GetEquationString(Precedence.MultDivMod, True) + ")"
+                Case Else
+                    Return ""
+            End Select
+        End Function
+        Public Overrides Function GetLatexEquationString(Optional ByVal prec As Precedence = Precedence.NoPrec, Optional ByVal IsRight As Boolean = False) As String
+            'Need parenthesis
+            Select Case Operation
+                Case eBinaryOperation.eAddition
+                    Dim S As String = Left.GetLatexEquationString() + "+" + Right.GetLatexEquationString()
+                    Return If(prec < Precedence.NoPrec OrElse IsRight, "(" + S + ")", S)
+                Case eBinaryOperation.eSubtraction
+                    Dim S As String = Left.GetLatexEquationString() + "-" + Right.GetLatexEquationString(Precedence.NoPrec, True)
+                    Return If(prec < Precedence.NoPrec OrElse IsRight, "(" + S + ")", S)
+                Case eBinaryOperation.eMultiplication
                     'Add parenthesis if inner operation precedence lower
-                    Return "(" + Left.GetEquationString() + "^" + Right.GetEquationString() + ")"
+                    Dim S As String = Left.GetLatexEquationString(Precedence.MultDivMod) + " \times " + Right.GetLatexEquationString(Precedence.MultDivMod)
+                    Return If(prec < Precedence.MultDivMod OrElse prec = Precedence.MultDivMod AndAlso IsRight, "(" + S + ")", S)
+                Case eBinaryOperation.eDivision
+                    'Add parenthesis if inner operation precedence lower
+                    Return "\frac{" + Left.GetLatexEquationString() + "}{" + Right.GetLatexEquationString() + "}"
+                Case eBinaryOperation.eModulus
+                    'Add parenthesis if inner operation precedence lower
+                    Dim S As String = Left.GetLatexEquationString(Precedence.MultDivMod) + " \text{ }\mathrm{mod}\text{ } " + Right.GetLatexEquationString(Precedence.MultDivMod, True)
+                    Return If(prec < Precedence.MultDivMod OrElse prec = Precedence.MultDivMod AndAlso IsRight, "(" + S + ")", S)
+                Case eBinaryOperation.ePower
+                    'Add parenthesis if outer operation precedence lower - right to left
+                    Dim S As String = Left.GetLatexEquationString(Precedence.ExpRoots, True) + "^{" + Right.GetLatexEquationString() + "}"
+                    Return If(prec = Precedence.ExpRoots AndAlso IsRight, "(" + S + ")", S)
+                Case eBinaryOperation.eNthRoot
+                    Return "\sqrt[" + Left.GetLatexEquationString() + "]{" + Right.GetLatexEquationString() + "}"
                 Case Else
                     Return ""
             End Select
@@ -240,7 +381,7 @@ Public Class EquationFinder
     Shared UnaryDict As New Dictionary(Of BigInteger, UnarySolution())
     Shared BinaryDict As New Dictionary(Of ValueTuple(Of BigInteger, BigInteger), BinarySolution())
     Shared Function GetUnarySolutions(ByVal Number As Solution) As Solution()
-        Dim Solutions As New ArrayList
+        Dim Solutions As New List(Of Solution)
         Dim Count As Integer
         Dim SubCount As Integer
         Dim StartCount As Integer = 0
@@ -253,7 +394,7 @@ Public Class EquationFinder
             Next
             StartCount = EndCount
         Next
-        Return Solutions.ToArray(GetType(Solution))
+        Return Solutions.ToArray()
     End Function
     Shared Function IntegerLogarithm10(ByVal Number As BigInteger) As BigInteger
         'Fast algorithm assuming can determine initial n: Number mod 10^n + Number / 10^n then use n/2
@@ -334,6 +475,25 @@ Public Class EquationFinder
         'End While
         'Return Root >> 1
     End Function
+    Shared Function NthRoot(ByVal X As BigInteger, ByVal N As BigInteger) As BigInteger
+        Dim UpperBound As BigInteger = BigInteger.One
+        While BigInteger.Pow(UpperBound, N) <= X 'find power of 2 upper bound
+            UpperBound <<= 1
+        End While
+        Dim LowerBound As BigInteger = UpperBound / 2, Mid = BigInteger.Zero 'Binary search
+        While LowerBound < UpperBound
+            Mid = (LowerBound + UpperBound) / 2
+            Dim MidNth As BigInteger = BigInteger.Pow(Mid, N)
+            If LowerBound < Mid And MidNth < X Then
+                LowerBound = Mid
+            ElseIf UpperBound > Mid And MidNth > X Then
+                UpperBound = Mid
+            Else
+                Return Mid
+            End If
+        End While
+        Return Mid + 1
+    End Function
     Shared Function NumberOfDigits(ByVal Number As BigInteger) As Long
         Dim Log10 As Integer = BigInteger.Log10(Number)
         Return Log10 + 1 'If(IntegerPositivePower(10, Log10) = Number, Log10, Log10 + 1)
@@ -402,7 +562,8 @@ Public Class EquationFinder
         Return UnaryDict(Number.Solution)
     End Function
     Shared Function GetBinarySolution(ByVal Number1 As Solution, ByVal Number2 As Solution) As Solution()
-        If BinaryDict.ContainsKey((Number1.Solution, Number2.Solution)) Then Return BinaryDict((Number1.Solution, Number2.Solution)).Select(Function(sol) New BinarySolution(sol.Solution, Number1, Number2, sol.Operation)).ToArray()
+        If BinaryDict.ContainsKey((Number1.Solution, Number2.Solution)) Then Return BinaryDict((Number1.Solution, Number2.Solution)).Select(
+            Function(sol) New BinarySolution(sol.Solution, Number1, Number2, sol.Operation)).ToArray()
         Dim Solution As New List(Of BinarySolution)
         Solution.Add(New BinarySolution(Number1.Solution + Number2.Solution, Number1, Number2, BinarySolution.eBinaryOperation.eAddition))
         Solution.Add(New BinarySolution(Number1.Solution - Number2.Solution, Number1, Number2, BinarySolution.eBinaryOperation.eSubtraction))
@@ -420,6 +581,18 @@ Public Class EquationFinder
             Solution.Add(New BinarySolution(IntegerPositivePower(Number1.Solution, Number2.Solution), Number1, Number2, BinarySolution.eBinaryOperation.ePower))
             'Solution.Add(New BinarySolution(Number1.Solution ^ Number2.Solution, Number1, Number2, BinarySolution.eBinaryOperation.ePower))
         End If
+        If Number1.Solution = 2 Then
+            Dim Result As BigInteger = IntegerSquareRoot(Number2.Solution)
+            If Result * Result = Number2.Solution Then
+                Solution.Add(New BinarySolution(Result, Number1, Number2, BinarySolution.eBinaryOperation.eNthRoot))
+            End If
+        ElseIf Number1.Solution > 2 AndAlso Number1.Solution <= Int32.MaxValue Then '1st root is an identity and multiplication would be prefered, zeroth root only has a solution for 1 but in x^(1/n) notation its impossible
+            'BigInteger.Pow requires number non-negative and can fit into an Int32
+            Dim Result As BigInteger = NthRoot(Number2.Solution, Number1.Solution)
+            If BigInteger.Pow(Result, Number1.Solution) = Number2.Solution Then
+                Solution.Add(New BinarySolution(Result, Number1, Number2, BinarySolution.eBinaryOperation.eNthRoot))
+            End If
+        End If
         BinaryDict.Add((Number1.Solution, Number2.Solution), Solution.ToArray())
         Return BinaryDict((Number1.Solution, Number2.Solution))
     End Function
@@ -427,11 +600,11 @@ Public Class EquationFinder
         Dim Count As Integer
         Dim LeftCount As Integer
         Dim RightCount As Integer
-        Dim Solutions As New ArrayList
+        Dim Solutions As New List(Of Solution)
         If Numbers.Length = 1 Then Solutions.AddRange(Numbers(0))
         For Count = 1 To Numbers.Length - 1
-            Dim LeftSolutions As New ArrayList
-            Dim RightSolutions As New ArrayList
+            Dim LeftSolutions As New List(Of Solution)
+            Dim RightSolutions As New List(Of Solution)
             Dim LeftNumbers(Count - 1) As Array
             Array.ConstrainedCopy(Numbers, 0, LeftNumbers, 0, Count)
             LeftSolutions.AddRange(GetCombinedSolutions(LeftNumbers))
@@ -446,31 +619,34 @@ Public Class EquationFinder
                 Next
             Next
         Next
-        Return Enumerable.GroupBy(CType(Solutions.ToArray(GetType(Solution)), Solution()), Function(KeySelector As Solution) KeySelector.Solution).Select(Function(Selector As IGrouping(Of BigInteger, Solution)) Selector.OrderBy(Function(KeySelector As Solution) KeySelector.CountUnaryOperations()).First()).ToArray()
+        Return Enumerable.GroupBy(Solutions.ToArray(), Function(KeySelector As Solution) KeySelector.Solution).Select(
+            Function(Selector As IGrouping(Of BigInteger, Solution)) Selector.OrderBy(Function(KeySelector As Solution) KeySelector.CountUnaryOperations()).First()).ToArray()
     End Function
     '2 or more numbers
     Shared Function GetSolutions(ByVal Numbers As Array) As Solution()
-        Dim Solutions As New ArrayList
+        Dim Solutions As New List(Of Array)
         For Count = 0 To Numbers.Length - 1
             'Unary solutions
             Solutions.Add(GetUnarySolutions(New UnarySolution(Numbers(Count), Nothing, UnarySolution.eUnaryOperation.eNone)))
         Next
         'Binary combinations done both directions to simulate parenthesis
-        Return GetCombinedSolutions(Solutions.ToArray(GetType(Array)))
+        Return GetCombinedSolutions(Solutions.ToArray())
     End Function
-    Public Shared Function Solve(ByVal LeftNumbers As BigInteger(), ByVal RightNumbers As BigInteger()) As Object()
+    Public Shared Function Solve(ByVal LeftNumbers As BigInteger(), ByVal RightNumbers As BigInteger()) As ValueTuple(Of Solution, Solution)
         'Accept Solutions from set on left and right with least unary operations
-        Dim Solutions As Object() = GetSolutions(LeftNumbers).GroupJoin(
+        Dim Solutions As ValueTuple(Of Solution, Solution)() = GetSolutions(LeftNumbers).GroupJoin(
                             GetSolutions(RightNumbers),
                             Function(Key As Solution) Key.Solution,
                             Function(Key As Solution) Key.Solution,
-                            Function(Match As Solution, Results As IEnumerable(Of Solution)) IIf(Results.Count = 0, New Object() {Nothing}, New Object() {Match, Results.DefaultIfEmpty(Nothing).FirstOrDefault(), LeftNumbers.Length})).Where(Function(Sol As Object()) Sol.Length <> 1).ToArray()
-        If Solutions.Count = 0 Then Return New Object() {New UnarySolution(0, Nothing, UnarySolution.eUnaryOperation.eNone), New UnarySolution(0, Nothing, UnarySolution.eUnaryOperation.eNone), 0}
-        Return Solutions.OrderBy(Function(Sol As Object()) Sol(0).CountUnaryOperations() + Sol(1).CountUnaryOperations()).First()
+                            Function(Match As Solution, Results As IEnumerable(Of Solution)) As ValueTuple(Of Solution, Solution)
+                                Return IIf(Results.Count = 0, New ValueTuple(Of Solution, Solution)(Nothing, Nothing), (Match, Results.DefaultIfEmpty(Nothing).FirstOrDefault()))
+                            End Function).Where(Function(Sol As ValueTuple(Of Solution, Solution)) Not Sol.Item1 Is Nothing AndAlso Not Sol.Item2 Is Nothing).ToArray()
+        If Solutions.Count = 0 Then Return (Nothing, Nothing)
+        Return Solutions.OrderBy(Function(Sol As ValueTuple(Of Solution, Solution)) Sol.Item1.CountUnaryOperations() + Sol.Item2.CountUnaryOperations()).First()
     End Function
-    Public Shared Function Solve(ByVal Numbers As BigInteger()) As Object()
+    Public Shared Function Solve(ByVal Numbers As BigInteger()) As ValueTuple(Of Solution, Solution)
         Dim Count As Integer
-        Dim Solutions As Object() 'BigInteger(), BigInteger(), = position
+        Dim Solutions As ValueTuple(Of Solution, Solution) 'BigInteger(), BigInteger(), = position
         'Place equivalence operator first
         For Count = 1 To Numbers.Length - 1
             'Left Solutions
@@ -481,8 +657,8 @@ Public Class EquationFinder
             Array.ConstrainedCopy(Numbers, Count, RightNumbers, 0, Numbers.Length - Count)
             'Accept Solutions from set on left and right with least unary operations
             Solutions = Solve(LeftNumbers, RightNumbers)
-            If Not Solutions Is Nothing Then Return Solutions
+            If Not Solutions.Item1 Is Nothing AndAlso Not Solutions.Item2 Is Nothing Then Return Solutions
         Next
-        Return Nothing
+        Return (Nothing, Nothing)
     End Function
 End Class
