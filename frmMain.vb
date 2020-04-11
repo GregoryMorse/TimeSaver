@@ -49,12 +49,13 @@ Public Class frmMain
     '        Throw New NotImplementedException()
     '    End Sub
     'End Class
-    Private Sub TexToPng(ByVal Str As String, ByVal g As Graphics)
+    Private Sub TexToPng(ByVal path As String, ByVal Str As String, ByVal g As Graphics)
         Dim Parser As New TexFormulaParser()
         Dim Formula As TexFormula = Parser.Parse("\color {blue} {" + Str + "}")
         'Dim Renderer As TexRenderer = Formula.GetRenderer(TexStyle.Display, 20.0, "Arial")
         'Renderer.RenderFormulaTo(New MyElementRenderer, 0.0, 0.0)
         Dim bytes As Byte() = Formula.RenderToPng(100.0, 0.0, 0.0, "Arial")
+        System.IO.File.WriteAllBytes(path, bytes)
         Dim MemStream As New System.IO.MemoryStream(bytes)
         Dim img As Image = Image.FromStream(MemStream)
         g.DrawImage(img, New PointF((Me.ClientSize.Width - img.Width) / 2, 16))
@@ -83,7 +84,7 @@ Public Class frmMain
         e.Graphics.DrawPath(Pens.Red, text_path)
         e.Graphics.ResetTransform()
         Dim Sol As ValueTuple(Of EquationFinder.Solution, EquationFinder.Solution) = EquationFinder.SplitSolve(TimeOfDay.Hour * 10000 + TimeOfDay.Minute * 100 + TimeOfDay.Second)
-        TexToPng(Sol.Item1.GetLatexEquationString() + "=" + Sol.Item2.GetLatexEquationString(), e.Graphics)
+        TexToPng(CurDate.ToString("H-mm-ss") + ".png", Sol.Item1.GetLatexEquationString() + "=" + Sol.Item2.GetLatexEquationString(), e.Graphics)
         text_path.Dispose()
         sf.Dispose()
         the_font.Dispose()

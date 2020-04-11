@@ -137,12 +137,22 @@ Public Class EquationFinder
         Return Result.ToArray()
     End Function
     Shared Function Factorial(ByVal Number As BigInteger) As BigInteger
-        Dim Result As BigInteger = BigInteger.One
-        While Number <> 0
-            Result = Result * Number
-            Number = Number - 1
-        End While
-        Return Result
+        If Factorials.Count = 0 Then
+            Factorials.Add(0, 1)
+            Factorials.Add(1, 1)
+            Dim Result As BigInteger = BigInteger.One
+            Dim i As BigInteger = 2
+            While Result <= MaxSubSolution
+                Result *= i
+                Factorials.Add(i, Result)
+                i += 1
+            End While
+        End If
+        If Factorials.ContainsKey(Number) Then
+            Return Factorials(Number)
+        Else
+            Return -1
+        End If
         'If Number = 0 Then Return 1 Else Return Number * Factorial(Number - 1)
     End Function
     Public Shared Function GetContigParts(ByVal Number As BigInteger)
@@ -238,7 +248,7 @@ Public Class EquationFinder
                 Case eUnaryOperation.eNaturalLogarithm
                     Return "ln " + CStr(Initial.GetEquationString(Precedence.Unary))
                 Case eUnaryOperation.ePowerOf10
-                    Return "E" + CStr(Initial.GetEquationString(Precedence.Unary)) '"10^"
+                    Return "ᴇ" + CStr(Initial.GetEquationString(Precedence.Unary)) '"10^" 'E
                 Case eUnaryOperation.eLogarithmBase10
                     Return "log " + CStr(Initial.GetEquationString(Precedence.Unary))
                 Case eUnaryOperation.eSquareRoot
@@ -268,7 +278,7 @@ Public Class EquationFinder
                 Case eUnaryOperation.eNaturalLogarithm
                     Return "\ln " + CStr(Initial.GetLatexEquationString(Precedence.Unary))
                 Case eUnaryOperation.ePowerOf10
-                    Return "\text{E}" + CStr(Initial.GetLatexEquationString(Precedence.Unary))
+                    Return "\text{ᴇ}" + CStr(Initial.GetLatexEquationString(Precedence.Unary))
                 Case eUnaryOperation.eLogarithmBase10
                     Return "\log " + CStr(Initial.GetLatexEquationString(Precedence.Unary))
                 Case eUnaryOperation.eSquareRoot
@@ -362,7 +372,7 @@ Public Class EquationFinder
                     Return "\frac{" + Left.GetLatexEquationString() + "}{" + Right.GetLatexEquationString() + "}"
                 Case eBinaryOperation.eModulus
                     'Add parenthesis if inner operation precedence lower
-                    Dim S As String = Left.GetLatexEquationString(Precedence.MultDivMod) + " \text{ }\mathrm{mod}\text{ } " + Right.GetLatexEquationString(Precedence.MultDivMod, True)
+                    Dim S As String = Left.GetLatexEquationString(Precedence.MultDivMod) + " \medspace\mathrm{ mod }\medspace " + Right.GetLatexEquationString(Precedence.MultDivMod, True)
                     Return If(prec < Precedence.MultDivMod OrElse prec = Precedence.MultDivMod AndAlso IsRight, "(" + S + ")", S)
                 Case eBinaryOperation.ePower
                     'Add parenthesis if outer operation precedence lower - right to left
@@ -378,6 +388,9 @@ Public Class EquationFinder
     'Unary operation depth configurable
     Const UnaryOperationDepth = 2
     Shared MaxSubSolution As BigInteger = BigInteger.One << 64
+    Shared MaxSubSolBits As Integer = -1
+    Shared MaxSubSolBase10 As Integer = -1
+    Shared Factorials As New Dictionary(Of BigInteger, BigInteger)
     Shared UnaryDict As New Dictionary(Of BigInteger, UnarySolution())
     Shared BinaryDict As New Dictionary(Of ValueTuple(Of BigInteger, BigInteger), BinarySolution())
     Shared Function GetUnarySolutions(ByVal Number As Solution) As Solution()
@@ -403,7 +416,8 @@ Public Class EquationFinder
         Return IIf(IntegerPositivePower(10, Digits - 1) = Number, Digits - 1, BigInteger.MinusOne)
     End Function
     Shared Function CheckMul(ByVal Number1 As BigInteger, ByVal Number2 As BigInteger) As Boolean
-        Return True
+        If MaxSubSolBits = -1 Then MaxSubSolBits = GetBitSize(MaxSubSolution)
+        Return GetBitSize(Number1) + GetBitSize(Number2) <= MaxSubSolBits
         'If Number1 = -1 Then Return Number2 <> Int64.MinValue
         'If Number1 = 0 Then Return True
         'Division rounding down must also use remainder?
@@ -412,25 +426,26 @@ Public Class EquationFinder
         'Return Result >= BigInteger.Abs(Number2)
     End Function
     Shared Function IntegerPositivePower(ByVal Number As BigInteger, ByVal Exponent As BigInteger) As BigInteger
-        Return BigInteger.Pow(Number, Exponent)
-        'IntegerPositivePower = 1
-        'While Exponent <> 0
-        ' If (Exponent Mod 2) = 1 Then
-        'If CheckMul(IntegerPositivePower, Number) Then
-        'IntegerPositivePower *= Number
-        'Else
-        'Return -1
-        'End If
-        'End If
-        'Exponent /= 2
-        'If CheckMul(Number, Number) Then
-        'Number *= Number
-        'Else
-        'Return -1
-        'End If
-        'End While
+        'Return BigInteger.Pow(Number, Exponent)
+        Dim Result As BigInteger = BigInteger.One
+        While Exponent <> 0
+            If (Exponent And BigInteger.One) <> 0 Then
+                If CheckMul(Result, Number) Then
+                    Result *= Number
+                Else
+                    Return -1
+                End If
+            End If
+            Exponent >>= 1
+            If CheckMul(Number, Number) Then
+                Number *= Number
+            Else
+                Return -1
+            End If
+        End While
+        Return Result
     End Function
-    Shared Function GetBitSize(Number)
+    Shared Function GetBitSize(Number As BigInteger) As Integer
         Dim bytes() As Byte = Number.ToByteArray()
         Dim Size As Integer = bytes.Length
         If Size = 0 Then Return 0
@@ -477,16 +492,19 @@ Public Class EquationFinder
     End Function
     Shared Function NthRoot(ByVal X As BigInteger, ByVal N As BigInteger) As BigInteger
         Dim UpperBound As BigInteger = BigInteger.One
-        While BigInteger.Pow(UpperBound, N) <= X 'find power of 2 upper bound
+        Dim pow As BigInteger = BigInteger.One
+        While pow <= X 'find power of 2 upper bound
             UpperBound <<= 1
+            pow = IntegerPositivePower(UpperBound, N)
+            If pow = -1 Then Return -1
         End While
         Dim LowerBound As BigInteger = UpperBound / 2, Mid = BigInteger.Zero 'Binary search
         While LowerBound < UpperBound
             Mid = (LowerBound + UpperBound) / 2
             Dim MidNth As BigInteger = BigInteger.Pow(Mid, N)
-            If LowerBound < Mid And MidNth < X Then
+            If LowerBound < Mid AndAlso MidNth < X Then
                 LowerBound = Mid
-            ElseIf UpperBound > Mid And MidNth > X Then
+            ElseIf UpperBound > Mid AndAlso MidNth > X Then
                 UpperBound = Mid
             Else
                 Return Mid
@@ -534,16 +552,22 @@ Public Class EquationFinder
             If Result * Result = Number.Solution Then
                 Solution.Add(New UnarySolution(Result, Number, UnarySolution.eUnaryOperation.eSquareRoot))
             End If
-            If (Number.Solution <= 16) Then Solution.Add(New UnarySolution(Factorial(Number.Solution), Number, UnarySolution.eUnaryOperation.eFactorial))
+            Result = Factorial(Number.Solution)
+            If Result <> -1 Then Solution.Add(New UnarySolution(Result, Number, UnarySolution.eUnaryOperation.eFactorial))
             'Solution.Add(New UnarySolution(Math.Exp(Number.Solution), Number, UnarySolution.eUnaryOperation.eNaturalExponent))
             'Solution.Add(New UnarySolution(Math.Log(Number.Solution), Number, UnarySolution.eUnaryOperation.eNaturalLogarithm))
             If IntegerLogarithm10(Number.Solution) <> -1 Then
                 Solution.Add(New UnarySolution(IntegerLogarithm10(Number.Solution), Number, UnarySolution.eUnaryOperation.eLogarithmBase10))
             End If
-            If Number.Solution <= 18 Then 'AndAlso IntegerPositivePower(10, Number.Solution) <> -1 Then
-                Solution.Add(New UnarySolution(IntegerPositivePower(10, Number.Solution), Number, UnarySolution.eUnaryOperation.ePowerOf10))
+            If MaxSubSolBase10 = -1 Then MaxSubSolBase10 = NumberOfDigits(MaxSubSolution)
+            If Number.Solution <= MaxSubSolBase10 Then 'AndAlso IntegerPositivePower(10, Number.Solution) <> -1 Then
+                Result = IntegerPositivePower(10, Number.Solution)
+                If Result <> -1 Then
+                    Solution.Add(New UnarySolution(Result, Number, UnarySolution.eUnaryOperation.ePowerOf10))
+                End If
             End If
-            If (Number.Solution - 1 <= 16) Then Solution.Add(New UnarySolution(Factorial(Number.Solution - 1), Number, UnarySolution.eUnaryOperation.eGamma))
+            Result = Factorial(Number.Solution - 1)
+            If Result <> -1 Then Solution.Add(New UnarySolution(Result, Number, UnarySolution.eUnaryOperation.eGamma))
             If Number.Solution Mod 100 = 0 Then
                 Solution.Add(New UnarySolution(Number.Solution / 100, Number, UnarySolution.eUnaryOperation.ePercent))
             End If
@@ -567,9 +591,9 @@ Public Class EquationFinder
         Dim Solution As New List(Of BinarySolution)
         Solution.Add(New BinarySolution(Number1.Solution + Number2.Solution, Number1, Number2, BinarySolution.eBinaryOperation.eAddition))
         Solution.Add(New BinarySolution(Number1.Solution - Number2.Solution, Number1, Number2, BinarySolution.eBinaryOperation.eSubtraction))
-        'If CheckMul(Number1.Solution, Number2.Solution) Then
-        Solution.Add(New BinarySolution(Number1.Solution * Number2.Solution, Number1, Number2, BinarySolution.eBinaryOperation.eMultiplication))
-        'End If
+        If CheckMul(Number1.Solution, Number2.Solution) Then
+            Solution.Add(New BinarySolution(Number1.Solution * Number2.Solution, Number1, Number2, BinarySolution.eBinaryOperation.eMultiplication))
+        End If
         If Number2.Solution <> 0 AndAlso Number1.Solution Mod Number2.Solution = 0 Then 'Number2.Solution * (Number1.Solution / Number2.Solution) = Number1.Solution Then
             Solution.Add(New BinarySolution(Number1.Solution / Number2.Solution, Number1, Number2, BinarySolution.eBinaryOperation.eDivision))
         End If
@@ -577,8 +601,11 @@ Public Class EquationFinder
             Solution.Add(New BinarySolution(Number1.Solution Mod Number2.Solution, Number1, Number2, BinarySolution.eBinaryOperation.eModulus))
         End If
         'Prevent imaginary numbers such as negative numbers to binary reciprical powers
-        If Number2.Solution >= 0 AndAlso Number2.Solution <= 256 Then ' AndAlso IntegerPositivePower(Number1.Solution, Number2.Solution) <> -1 Then
-            Solution.Add(New BinarySolution(IntegerPositivePower(Number1.Solution, Number2.Solution), Number1, Number2, BinarySolution.eBinaryOperation.ePower))
+        If Number2.Solution >= 0 AndAlso Number2.Solution <= Int32.MaxValue Then ' AndAlso IntegerPositivePower(Number1.Solution, Number2.Solution) <> -1 Then
+            Dim Result As BigInteger = IntegerPositivePower(Number1.Solution, Number2.Solution)
+            If Result <> -1 Then
+                Solution.Add(New BinarySolution(Result, Number1, Number2, BinarySolution.eBinaryOperation.ePower))
+            End If
             'Solution.Add(New BinarySolution(Number1.Solution ^ Number2.Solution, Number1, Number2, BinarySolution.eBinaryOperation.ePower))
         End If
         If Number1.Solution = 2 Then
@@ -589,10 +616,20 @@ Public Class EquationFinder
         ElseIf Number1.Solution > 2 AndAlso Number1.Solution <= Int32.MaxValue Then '1st root is an identity and multiplication would be prefered, zeroth root only has a solution for 1 but in x^(1/n) notation its impossible
             'BigInteger.Pow requires number non-negative and can fit into an Int32
             Dim Result As BigInteger = NthRoot(Number2.Solution, Number1.Solution)
-            If BigInteger.Pow(Result, Number1.Solution) = Number2.Solution Then
+            If Result <> -1 AndAlso BigInteger.Pow(Result, Number1.Solution) = Number2.Solution Then
                 Solution.Add(New BinarySolution(Result, Number1, Number2, BinarySolution.eBinaryOperation.eNthRoot))
             End If
         End If
+        Dim Possible As New HashSet(Of BigInteger)
+        Dim i As Integer = 0
+        While i <> Solution.Count
+            If Solution(i).Solution > MaxSubSolution OrElse Possible.Contains(Solution(i).Solution) Then
+                Solution.RemoveAt(i)
+            Else
+                Possible.Add(Solution(i).Solution)
+                i += 1
+            End If
+        End While
         BinaryDict.Add((Number1.Solution, Number2.Solution), Solution.ToArray())
         Return BinaryDict((Number1.Solution, Number2.Solution))
     End Function
