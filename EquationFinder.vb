@@ -11,6 +11,10 @@ Imports System.Numerics
 'single pi: -log(sqrt((-cos pi)% %...%))=n
 'https://www.cut-the-knot.org/arithmetic/funny/Dirac.shtml#solution
 
+Public Class Irrational
+    'non integral: pi, e^, log10, ln, log(base), i, fractional powers - sqrt, nth root, cos, sin, tan, cosh, sinh, tanh
+    'overly large: E/10^, n^, a*b, a/b where b<1, !
+End Class
 Public Class Rational
     Public Numerator As BigInteger
     Public Denominator As BigInteger
@@ -412,8 +416,8 @@ Public Class EquationFinder
     Shared Function IntegerLogarithm10(ByVal Number As BigInteger) As BigInteger
         'Fast algorithm assuming can determine initial n: Number mod 10^n + Number / 10^n then use n/2
         'maximum is floor(base*log 2) so choose nearest power of 2
-        Dim Digits As BigInteger = NumberOfDigits(Number)
-        Return IIf(IntegerPositivePower(10, Digits - 1) = Number, Digits - 1, BigInteger.MinusOne)
+        Dim Digits As BigInteger = BigInteger.Log10(Number)
+        Return IIf(IntegerPositivePower(10, Digits) = Number, Digits, BigInteger.MinusOne)
     End Function
     Shared Function CheckMul(ByVal Number1 As BigInteger, ByVal Number2 As BigInteger) As Boolean
         If MaxSubSolBits = -1 Then MaxSubSolBits = GetBitSize(MaxSubSolution)
@@ -490,7 +494,7 @@ Public Class EquationFinder
         'End While
         'Return Root >> 1
     End Function
-    Shared Function NthRoot(ByVal X As BigInteger, ByVal N As BigInteger) As BigInteger
+    Shared Function IntegerNthRoot(ByVal X As BigInteger, ByVal N As BigInteger) As BigInteger
         Dim UpperBound As BigInteger = BigInteger.One
         Dim pow As BigInteger = BigInteger.One
         While pow <= X 'find power of 2 upper bound
@@ -615,7 +619,7 @@ Public Class EquationFinder
             End If
         ElseIf Number1.Solution > 2 AndAlso Number1.Solution <= Int32.MaxValue Then '1st root is an identity and multiplication would be prefered, zeroth root only has a solution for 1 but in x^(1/n) notation its impossible
             'BigInteger.Pow requires number non-negative and can fit into an Int32
-            Dim Result As BigInteger = NthRoot(Number2.Solution, Number1.Solution)
+            Dim Result As BigInteger = IntegerNthRoot(Number2.Solution, Number1.Solution)
             If Result <> -1 AndAlso BigInteger.Pow(Result, Number1.Solution) = Number2.Solution Then
                 Solution.Add(New BinarySolution(Result, Number1, Number2, BinarySolution.eBinaryOperation.eNthRoot))
             End If
